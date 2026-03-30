@@ -1,0 +1,2038 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한국발 항공 유류할증료 대시보드 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --bg: #0a0e1a;
+  --bg2: #111827;
+  --bg3: #1a2235;
+  --card: #141c2e;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #e8eaf0;
+  --muted: #6b7a9a;
+  --accent: #4f8ef7;
+  --accent2: #7b5cf5;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --green: #10b981;
+  --coral: #ff6b6b;
+
+  --c-japan: #8b8bff;
+  --c-china: #4f8ef7;
+  --c-vietnam: #34d399;
+  --c-usa: #ff6b6b;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Header ── */
+header {
+  background: linear-gradient(135deg, #0d1428 0%, #131f3a 50%, #0d1428 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 24px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+
+.header-left h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #fff;
+}
+.header-left p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+  font-family: 'Space Mono', monospace;
+}
+
+.alert-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: #fca5a5;
+  font-weight: 500;
+  animation: pulse-badge 2.5s ease-in-out infinite;
+}
+.alert-dot {
+  width: 6px; height: 6px;
+  background: var(--danger);
+  border-radius: 50%;
+  animation: blink 1.2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes pulse-badge { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0)} 50%{box-shadow:0 0 12px 2px rgba(239,68,68,0.15)} }
+
+/* ── Month Selector ── */
+.month-bar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 40px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.month-bar-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.month-tabs {
+  display: flex;
+  gap: 6px;
+}
+.month-tab {
+  padding: 8px 20px;
+  border-radius: 30px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.month-tab:hover { border-color: rgba(79,142,247,0.4); color: var(--text); }
+.month-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.month-tab.apr-tab.active {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-color: #ef4444;
+}
+.surge-tag {
+  position: absolute;
+  top: -10px; right: -6px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* ── Layout ── */
+.main { padding: 28px 40px; max-width: 1400px; margin: 0 auto; }
+
+/* ── KPI Cards ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+  cursor: pointer;
+}
+.kpi-card:hover { transform: translateY(-2px); border-color: var(--border2); }
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.kpi-card.japan::before { background: var(--c-japan); }
+.kpi-card.china::before { background: var(--c-china); }
+.kpi-card.vietnam::before { background: var(--c-vietnam); }
+.kpi-card.usa::before { background: var(--c-usa); }
+
+.kpi-flag { font-size: 22px; margin-bottom: 8px; display: block; }
+.kpi-name { font-size: 12px; color: var(--muted); margin-bottom: 2px; font-weight: 500; }
+.kpi-route { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 10px; opacity: 0.7; }
+.kpi-value { font-size: 24px; font-weight: 700; font-family: 'Space Mono', monospace; color: #fff; }
+.kpi-change {
+  font-size: 11px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+}
+.kpi-change.up { color: #fca5a5; }
+.kpi-change.down { color: var(--green); }
+.kpi-change.flat { color: var(--muted); }
+
+/* ── Grid 2 cols ── */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.full-width { grid-column: 1 / -1; }
+
+/* ── Panel ── */
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+}
+.panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+.panel-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.panel-tag {
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  color: var(--muted);
+  background: var(--bg3);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+/* ── Map ── */
+#map {
+  height: 380px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #0d1628;
+}
+.leaflet-container { background: #0d1628 !important; }
+.leaflet-tile-pane { filter: brightness(0.7) saturate(0.6) hue-rotate(200deg); }
+.route-popup {
+  background: var(--bg3) !important;
+  border: 1px solid var(--border2) !important;
+  border-radius: 8px !important;
+  color: var(--text) !important;
+  font-family: 'Noto Sans KR', sans-serif !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+}
+.leaflet-popup-content-wrapper { background: none; box-shadow: none; padding: 0; }
+.leaflet-popup-tip-container { display: none; }
+.leaflet-popup-content { margin: 0 !important; }
+.popup-inner { padding: 12px 14px; }
+.popup-name { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.popup-value { font-size: 18px; font-weight: 700; font-family: 'Space Mono', monospace; }
+.popup-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); margin-top: 4px; gap: 16px; }
+
+/* ── Chart containers ── */
+.chart-wrap { position: relative; }
+
+/* ── Legend ── */
+.legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Correlation metrics ── */
+.corr-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.corr-metric {
+  background: var(--bg3);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+}
+.corr-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; font-weight: 700; }
+.corr-val { font-size: 20px; font-weight: 700; font-family: 'Space Mono', monospace; }
+.corr-val.high { color: var(--coral); }
+.corr-val.mid { color: var(--warn); }
+.corr-val.low { color: var(--green); }
+.corr-desc { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* ── Timeline events ── */
+.timeline { margin-top: 14px; }
+.event {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.event:last-child { border-bottom: none; }
+.event-date {
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  color: var(--accent);
+  white-space: nowrap;
+  min-width: 56px;
+}
+.event-text { font-size: 12px; color: var(--text); line-height: 1.5; }
+.event-text span { color: var(--warn); font-weight: 700; }
+
+/* ── Surcharge stage indicator ── */
+.stage-bar {
+  margin: 14px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.stage-track {
+  flex: 1;
+  height: 10px;
+  background: var(--bg3);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.stage-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.6s ease, background-color 0.4s;
+}
+.stage-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+  margin-top: 4px;
+}
+
+/* ── Divergence panel ── */
+.div-reason {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.div-icon {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  flex-shrink: 0;
+}
+.div-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.div-body  { font-size: 11px; color: var(--muted); line-height: 1.6; }
+.div-hl    { color: var(--warn); font-weight: 600; }
+
+.corr-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.corr-box-top  { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+.corr-box-body { font-size: 11px; color: var(--muted); line-height: 1.6; margin-bottom: 8px; }
+.corr-box-tag  { display: inline-block; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; }
+
+/* ── Suspension Table ── */
+.stab {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-family: 'Noto Sans KR', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.stab:hover { border-color: rgba(79,142,247,0.4); color: var(--text); }
+.stab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.susp-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: color-mix(in srgb, var(--cc) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cc) 30%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  min-width: 90px;
+}
+.chip-num { font-size: 18px; font-weight: 700; font-family: 'Space Mono', monospace; color: var(--cc); }
+.chip-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+.susp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.susp-table th {
+  text-align: left;
+  padding: 9px 12px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  border-bottom: 1px solid var(--border2);
+  white-space: nowrap;
+  background: var(--bg3);
+}
+.susp-table th:first-child { border-radius: var(--radius-sm) 0 0 0; }
+.susp-table th:last-child  { border-radius: 0 var(--radius-sm) 0 0; }
+.susp-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  color: var(--text);
+}
+.susp-table tbody tr { transition: background 0.12s; }
+.susp-table tbody tr:hover { background: rgba(255,255,255,0.025); }
+.susp-table tbody tr:last-child td { border-bottom: none; }
+.susp-table tbody tr.hidden-row { display: none; }
+
+.airline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text);
+}
+.airline-logo {
+  width: 22px; height: 22px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  flex-shrink: 0;
+}
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.status-confirmed { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+.status-partial   { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
+.status-review    { background: rgba(107,114,154,0.15); color: #9ba5bf; border: 1px solid rgba(107,114,154,0.25); }
+.route-pill {
+  display: inline-block;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  color: var(--accent);
+  margin: 2px 2px 2px 0;
+  white-space: nowrap;
+}
+.scale-bar {
+  display: flex; align-items: center; gap: 6px;
+}
+.scale-fill {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--coral);
+  min-width: 4px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 24px 40px;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  font-family: 'Space Mono', monospace;
+  margin-top: 8px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  header { padding: 16px 20px; flex-wrap: wrap; gap: 10px; }
+  .month-bar { padding: 12px 20px; flex-wrap: wrap; gap: 10px; }
+  .main { padding: 16px 20px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>✈ 4-5월 유가변동 관련 긴급 대시보드</h1>
+    <p>Korean Air · 한국 출발 편도 기준 · 대권거리 비례제 · 2026년 1~4월</p>
+  </div>
+  <div class="alert-badge">
+    <span class="alert-dot"></span>
+    4월 역대 최대 상승폭 (+12단계, 3배↑)
+  </div>
+</header>
+
+<!-- Month Selector -->
+<div class="month-bar">
+  <span class="month-bar-label">기준 월 선택</span>
+  <div class="month-tabs">
+    <button class="month-tab" data-month="0" onclick="selectMonth(0, this)">1월</button>
+    <button class="month-tab" data-month="1" onclick="selectMonth(1, this)">2월</button>
+    <button class="month-tab" data-month="2" onclick="selectMonth(2, this)">3월</button>
+    <button class="month-tab apr-tab active" data-month="3" onclick="selectMonth(3, this)">
+      4월
+      <span class="surge-tag">역대급↑</span>
+    </button>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);">
+    <span id="stage-label-sm" style="font-family:'Space Mono',monospace;"></span>
+    <span>| 유류할증료 단계</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ★ Row 0: Flight Suspension Table (TOP) -->
+  <div class="panel full-width" style="margin-bottom:18px;">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">🚫 국내 항공사 4~5월 비운항·감편 현황</div>
+        <div class="panel-sub">중동 전쟁 여파 항공유 급등에 따른 국내 항공사 운항 축소 동향 (2026년 3월 말 기준)</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span class="panel-tag">비운항 확정</span>
+        <div id="susp-filter" style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="stab active" data-f="all" onclick="filterSusp('all',this)">전체</button>
+          <button class="stab" data-f="미주" onclick="filterSusp('미주',this)">미주</button>
+          <button class="stab" data-f="동남아" onclick="filterSusp('동남아',this)">동남아</button>
+          <button class="stab" data-f="대양주" onclick="filterSusp('대양주',this)">대양주</button>
+          <button class="stab" data-f="검토중" onclick="filterSusp('검토중',this)">검토중</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary chips -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+      <div class="susp-chip" style="--cc:#ef4444;">
+        <span class="chip-num">8개</span><span class="chip-label">항공사 감편</span>
+      </div>
+      <div class="susp-chip" style="--cc:#f59e0b;">
+        <span class="chip-num">200편+</span><span class="chip-label">비운항 확정</span>
+      </div>
+      <div class="susp-chip" style="--cc:#8b8bff;">
+        <span class="chip-num">4월~5월</span><span class="chip-label">영향 기간</span>
+      </div>
+      <div class="susp-chip" style="--cc:#34d399;">
+        <span class="chip-num">수수료 無</span><span class="chip-label">환불·변경 가능</span>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto;">
+      <table class="susp-table" id="susp-table">
+        <thead>
+          <tr>
+            <th>항공사</th>
+            <th>구분</th>
+            <th>영향 노선</th>
+            <th>기간</th>
+            <th>규모</th>
+            <th>상태</th>
+            <th>비고</th>
+          </tr>
+        </thead>
+        <tbody id="susp-tbody">
+          <!-- Rendered by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:14px;padding:12px 14px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.7;">
+      <strong style="color:var(--text);">승객 안내</strong> &nbsp;비운항 대상 항공권 소지자는 <strong style="color:var(--warn);">7일 이내 일정</strong>으로 1회 무료 변경 또는 <strong style="color:var(--green);">수수료 없이 전액 환불</strong> 가능 (항공사별 상이). 반드시 각 항공사 공식 채널 확인 요망. &nbsp;·&nbsp; 출처: 서울경제·뉴스1·데일리안 (2026.03.22~26)
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card japan">
+      <span class="kpi-flag">🇯🇵</span>
+      <div class="kpi-name">일본 — 도쿄 (NRT)</div>
+      <div class="kpi-route">ICN→NRT · ~750mi</div>
+      <div class="kpi-value" id="kv-japan">–</div>
+      <div class="kpi-change" id="kc-japan">–</div>
+    </div>
+    <div class="kpi-card china">
+      <span class="kpi-flag">🇨🇳</span>
+      <div class="kpi-name">중국 — 베이징 (PEK)</div>
+      <div class="kpi-route">ICN→PEK · ~820mi</div>
+      <div class="kpi-value" id="kv-china">–</div>
+      <div class="kpi-change" id="kc-china">–</div>
+    </div>
+    <div class="kpi-card vietnam">
+      <span class="kpi-flag">🇻🇳</span>
+      <div class="kpi-name">베트남 — 하노이 (HAN)</div>
+      <div class="kpi-route">ICN→HAN · ~2,300mi</div>
+      <div class="kpi-value" id="kv-vietnam">–</div>
+      <div class="kpi-change" id="kc-vietnam">–</div>
+    </div>
+    <div class="kpi-card usa">
+      <span class="kpi-flag">🌎</span>
+      <div class="kpi-name">미주 — LA (LAX)</div>
+      <div class="kpi-route">ICN→LAX · ~5,950mi</div>
+      <div class="kpi-value" id="kv-usa">–</div>
+      <div class="kpi-change" id="kc-usa">–</div>
+    </div>
+  </div>
+
+  <!-- Row 1: Trend + Map -->
+  <div class="grid-2" style="margin-bottom:18px;">
+
+    <!-- Trend Chart -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📈 월별 유류할증료 추이</div>
+          <div class="panel-sub">2026년 1~4월 · 한국항공 편도(원)</div>
+        </div>
+        <span class="panel-tag">LINE CHART</span>
+      </div>
+      <div class="chart-wrap" style="height:260px;">
+        <canvas id="trendChart"></canvas>
+      </div>
+      <div class="legend" id="trend-legend">
+        <div class="legend-item"><span class="legend-dot" style="background:var(--c-japan)"></span>일본</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--c-china)"></span>중국</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--c-vietnam)"></span>베트남</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--c-usa)"></span>미주(LA)</div>
+      </div>
+    </div>
+
+    <!-- Bar Comparison Chart -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📊 월별 노선 비교</div>
+          <div class="panel-sub">4개 노선 나란히 비교 (원)</div>
+        </div>
+        <span class="panel-tag">BAR CHART</span>
+      </div>
+      <div class="chart-wrap" style="height:260px;">
+        <canvas id="barChart"></canvas>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#5b7fcb"></span>1월</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>2월</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--warn)"></span>3월</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--coral)"></span>4월</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Map (full width) -->
+  <div class="panel full-width" style="margin-bottom:18px;">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">🗺 항로 지도 — <span id="map-month-label">4월</span> 유류할증료</div>
+        <div class="panel-sub">인천(ICN) 출발 · 클릭/탭으로 노선 정보 확인 · OpenStreetMap 기반</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span class="panel-tag">LEAFLET MAP</span>
+        <span id="map-stage-badge" style="font-size:11px;font-family:'Space Mono',monospace;padding:4px 10px;border-radius:20px;background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);">단계: 18</span>
+      </div>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <!-- Row 3: Correlation + Oil Price -->
+  <div class="grid-2" style="margin-bottom:18px;">
+
+    <!-- Oil vs Jet Fuel Price -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🛢 유가 & 항공유 가격 변동</div>
+          <div class="panel-sub">브렌트유($/bbl) vs 싱가포르 MOPS 항공유(cents/gal)</div>
+        </div>
+        <span class="panel-tag">DUAL AXIS</span>
+      </div>
+      <div class="chart-wrap" style="height:250px;">
+        <canvas id="oilChart"></canvas>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot" style="background:var(--warn)"></span>브렌트유($/bbl)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>싱가포르 항공유 MOPS(¢/gal)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:rgba(239,68,68,0.5);width:14px;height:2px;border-radius:0;"></span>이란전쟁 발발</div>
+      </div>
+    </div>
+
+    <!-- Correlation Scatter -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📉 상관관계 분석</div>
+          <div class="panel-sub">브렌트유가 vs 유류할증료 (단거리/장거리)</div>
+        </div>
+        <span class="panel-tag">SCATTER</span>
+      </div>
+      <div class="corr-metrics">
+        <div class="corr-metric">
+          <div class="corr-label">상관계수 (R)</div>
+          <div class="corr-val high">0.97</div>
+          <div class="corr-desc">유가↑ = 할증료↑</div>
+        </div>
+        <div class="corr-metric">
+          <div class="corr-label">4월 단거리 변화</div>
+          <div class="corr-val high">+171%</div>
+          <div class="corr-desc">日·中 3→4월</div>
+        </div>
+        <div class="corr-metric">
+          <div class="corr-label">4월 미주 변화</div>
+          <div class="corr-val high">+247%</div>
+          <div class="corr-desc">LA 3→4월</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:175px;">
+        <canvas id="scatterChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3-R: Regional Jet Fuel Price Breakdown -->
+  <div class="panel full-width" style="margin-bottom:18px;">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">🌍 지역별 항공유 현물가 비교 — 미국 · 유럽 · 아시아</div>
+        <div class="panel-sub">Platts/Argus 벤치마크 기반 주간 추정치 · $/bbl · 이란전쟁 전후 지역별 괴리 분석</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span class="panel-tag">REGIONAL BREAKDOWN</span>
+        <div style="display:flex;gap:6px;">
+          <button class="stab active" id="rg-unit-btn" onclick="toggleRegUnit(this)">$/bbl 보기</button>
+          <button class="stab" id="rg-idx-btn" onclick="toggleRegIdx(this)">지수 보기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Regional KPI chips -->
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;">
+      <div style="background:var(--bg3);border-radius:var(--radius-sm);border:1px solid rgba(255,107,107,0.2);padding:12px 14px;">
+        <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:0.07em;margin-bottom:4px;">🇺🇸 미국 (걸프코스트)</div>
+        <div style="font-size:20px;font-weight:700;font-family:'Space Mono',monospace;color:#ff6b6b;">$165/bbl</div>
+        <div style="font-size:11px;color:#fca5a5;margin-top:3px;">전쟁 전 $88 대비 <strong>+88%</strong></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Argus US Jet Index · WTI 연동</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:var(--radius-sm);border:1px solid rgba(245,158,11,0.2);padding:12px 14px;">
+        <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:0.07em;margin-bottom:4px;">🇬🇧 유럽 (로테르담 NWE)</div>
+        <div style="font-size:20px;font-weight:700;font-family:'Space Mono',monospace;color:#f59e0b;">$172/bbl</div>
+        <div style="font-size:11px;color:#fcd34d;margin-top:3px;">전쟁 전 $89 대비 <strong>+93%</strong> ↑최고</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Platts CIF NWE · Brent 연동 · 공급 이중난</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:var(--radius-sm);border:1px solid rgba(52,211,153,0.2);padding:12px 14px;">
+        <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:0.07em;margin-bottom:4px;">🇸🇬 아시아 (싱가포르 MOPS)</div>
+        <div style="font-size:20px;font-weight:700;font-family:'Space Mono',monospace;color:#34d399;">$130/bbl</div>
+        <div style="font-size:11px;color:#6ee7b7;margin-top:3px;">피크 $240 대비 <strong>-46%</strong> 하락 중</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Singapore MOPS · 한국 유류할증료 기준</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:var(--radius-sm);border:1px solid rgba(79,142,247,0.2);padding:12px 14px;">
+        <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:0.07em;margin-bottom:4px;">🌐 IATA 글로벌 평균</div>
+        <div style="font-size:20px;font-weight:700;font-family:'Space Mono',monospace;color:#4f8ef7;">$197/bbl</div>
+        <div style="font-size:11px;color:#93c5fd;margin-top:3px;">전주 대비 <strong>+12.6%</strong> (3월 셋째주)</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Platts/IATA Composite · 수요가중 평균</div>
+      </div>
+    </div>
+
+    <!-- Regional chart + insight grid -->
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:18px;">
+      <div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0.07em;margin-bottom:8px;" id="reg-chart-label">주간 현물가 추이 ($/bbl)</div>
+        <div class="chart-wrap" style="height:260px;">
+          <canvas id="regionalChart"></canvas>
+        </div>
+        <div class="legend" style="margin-top:10px;">
+          <div class="legend-item"><span class="legend-dot" style="background:#ff6b6b"></span>미국 걸프코스트</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>유럽 로테르담</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#34d399"></span>아시아 싱가포르</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#4f8ef7;width:14px;height:2px;border-radius:0;"></span>IATA 글로벌</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0.07em;">지역별 가격 차이 원인</div>
+
+        <div class="div-reason">
+          <div class="div-icon" style="background:rgba(52,211,153,0.15);color:#34d399;">SG</div>
+          <div>
+            <div class="div-title">아시아: 급등 후 선행 하락</div>
+            <div class="div-body">호르무즈 최근접 → 충격 즉각 반영. 한·중·일 항공사 감편으로 <span class="div-hl">수요 파괴 가장 빠름.</span> 싱가포르 정제소 가동률 85%→60% 감소로 공급도 제한적이나, 수요 하락이 더 커 가격 하락 주도.</div>
+          </div>
+        </div>
+
+        <div class="div-reason">
+          <div class="div-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b;">EU</div>
+          <div>
+            <div class="div-title">유럽: 지금이 가장 높음</div>
+            <div class="div-body">인도 Reliance 공급 차단 + 중동·아프리카 대안도 고갈. 나이지리아 당고테·미국 걸프코스트 물량도 라틴아메리카 우선. <span class="div-hl">대체 공급선 구축에 4~6주 필요</span>해 당분간 고가 지속.</div>
+          </div>
+        </div>
+
+        <div class="div-reason">
+          <div class="div-icon" style="background:rgba(255,107,107,0.15);color:#ff6b6b;">US</div>
+          <div>
+            <div class="div-title">미국: 중간 수준 유지</div>
+            <div class="div-body">국내 정제 기반으로 일부 완충. 그러나 서부 해안은 정제소 2곳 폐쇄로 취약. EIA가 2026 연간 전망을 <span class="div-hl">$2.67/gal로 37% 상향.</span> 중동 수입 없어도 국내 WTI 상승이 연동.</div>
+          </div>
+        </div>
+
+        <!-- Regional spread table -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:11px;">
+          <div style="color:var(--muted);font-weight:700;margin-bottom:8px;font-size:10px;letter-spacing:0.07em;">지역간 스프레드 (vs 미국)</div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
+            <span style="color:var(--muted);">유럽 프리미엄</span>
+            <span style="color:#f59e0b;font-weight:700;font-family:'Space Mono',monospace;">+$7/bbl</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
+            <span style="color:var(--muted);">아시아 디스카운트</span>
+            <span style="color:#34d399;font-weight:700;font-family:'Space Mono',monospace;">-$35/bbl</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;">
+            <span style="color:var(--muted);">아시아-유럽 격차</span>
+            <span style="color:#fca5a5;font-weight:700;font-family:'Space Mono',monospace;">$42/bbl ↑역대급</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom note -->
+    <div style="margin-top:14px;padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border);font-size:11px;color:var(--muted);line-height:1.7;">
+      <strong style="color:var(--text);">데이터 출처 및 기준</strong> &nbsp;미국=Argus US Jet Fuel Index (걸프코스트 평균) · 유럽=Platts CIF NWE Rotterdam · 아시아=Singapore MOPS (S&P Global Platts) · IATA=Platts Global Composite. &nbsp;전쟁 이전(2/27) 미국 $88 · 유럽 $89 · 아시아 $86/bbl 기준. 3/27 현재가는 Argus/IATA 보도 기반 <strong style="color:#fcd34d;">추정치 (±5~10% 오차 가능)</strong>. 실시간 값은 IATA Fuel Monitor 직접 확인 요망.
+    </div>
+  </div>
+
+  <!-- Row 3-B: Brent vs Jet Fuel Divergence Explainer -->
+  <div class="panel full-width" style="margin-bottom:18px;">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">🔍 브렌트유 상승 vs 항공유 하락 — 괴리 현상 분석</div>
+        <div class="panel-sub">같은 방향으로 움직이지 않는 이유와 상관관계 메커니즘</div>
+      </div>
+      <span class="panel-tag">DIVERGENCE ANALYSIS</span>
+    </div>
+
+    <!-- Divergence chart -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-weight:700;letter-spacing:0.07em;">지수화 비교 (2025년 11월 = 100 기준)</div>
+        <div class="chart-wrap" style="height:200px;">
+          <canvas id="divChart"></canvas>
+        </div>
+        <div class="legend" style="margin-top:10px;">
+          <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>브렌트유 (지수)</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#4f8ef7"></span>싱가포르 항공유 MOPS (지수)</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#ff6b6b;width:14px;height:2px;border-radius:0;"></span>크랙스프레드 (항공유 프리미엄)</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0.07em;margin-bottom:2px;">괴리 발생 5가지 원인</div>
+
+        <div class="div-reason">
+          <div class="div-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b;">①</div>
+          <div>
+            <div class="div-title">수요 파괴 (Demand Destruction)</div>
+            <div class="div-body">항공유 가격 급등 → 항공사들이 노선 대규모 감편 → 항공유 수요 급감. 브렌트유는 산업·운송 전체 수요 반영이라 항공 감편 영향이 희석됨. <span class="div-hl">항공유만 선행 하락.</span></div>
+          </div>
+        </div>
+
+        <div class="div-reason">
+          <div class="div-icon" style="background:rgba(79,142,247,0.15);color:#4f8ef7;">②</div>
+          <div>
+            <div class="div-title">크랙스프레드 (Crack Spread) 축소</div>
+            <div class="div-body">항공유 = 원유 + 정제 마진. 정제소들이 항공유→경유·가솔린으로 생산 전환 시 항공유 공급↑, 크랙스프레드 압축. 원유가 올라도 <span class="div-hl">정제 마진이 줄면 항공유 가격은 다른 방향으로 움직임.</span></div>
+          </div>
+        </div>
+
+        <div class="div-reason">
+          <div class="div-icon" style="background:rgba(52,211,153,0.15);color:#34d399;">③</div>
+          <div>
+            <div class="div-title">MOPS 측정 구간의 시간 지연</div>
+            <div class="div-body">4월 유류할증료는 <span class="div-hl">2/16~3/15 MOPS 평균</span> 기준. 3월 4일 최고점(240$/bbl) 이후 하락분이 평균에 반영돼 실제 적용 단계(18단계)가 형성됨. 브렌트유는 현재 시가 반영.</div>
+          </div>
+        </div>
+
+        <div class="div-reason">
+          <div class="div-icon" style="background:rgba(139,139,255,0.15);color:#8b8bff;">④</div>
+          <div>
+            <div class="div-title">전략비축유 방출 & 대체 공급</div>
+            <div class="div-body">IEA·미국이 전략비축유 방출 조율 시 항공유 등 경질유 공급 일시 증가. 브렌트유 선물가격은 <span class="div-hl">중동 리스크 프리미엄</span>을 계속 반영하지만 현물 항공유는 공급 확대로 하락.</div>
+          </div>
+        </div>
+
+        <div class="div-reason">
+          <div class="div-icon" style="background:rgba(255,107,107,0.15);color:#ff6b6b;">⑤</div>
+          <div>
+            <div class="div-title">우회 항로 정상화</div>
+            <div class="div-body">중동 영공 폐쇄 초기 패닉에 항공유 급등 → 이후 유럽·아프리카 우회 항로 고정화로 연료 소비 예측 가능해짐. 공급 불확실성 프리미엄 해소 → <span class="div-hl">항공유 현물가 선행 안정.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOPS Reference Period Table -->
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.07em;margin-bottom:10px;">📋 MOPS 기준기간별 실측·추정치 (싱가포르 항공유 ¢/gal)</div>
+      <div style="overflow-x:auto;">
+        <table class="susp-table" style="font-size:12px;">
+          <thead>
+            <tr>
+              <th>적용 월</th>
+              <th>MOPS 기준 기간</th>
+              <th>평균 MOPS (¢/gal)</th>
+              <th>배럴당 환산 ($/bbl)</th>
+              <th>적용 단계</th>
+              <th>데이터 신뢰도</th>
+              <th>비고</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span style="font-family:'Space Mono',monospace;font-weight:700;">1월</span></td>
+              <td><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);">11/16 ~ 12/15 (2025)</span></td>
+              <td><span style="font-family:'Space Mono',monospace;font-weight:700;color:#8b8bff;">~225¢</span></td>
+              <td><span style="font-family:'Space Mono',monospace;color:var(--muted);">~$94.5</span></td>
+              <td><span class="status-badge" style="background:rgba(139,139,255,0.15);color:#8b8bff;border:1px solid rgba(139,139,255,0.3);">9단계</span></td>
+              <td><span class="status-badge status-partial">추정치</span></td>
+              <td style="font-size:11px;color:var(--muted);">9단계 구간(220~229¢) 중간값. 전월(12월) 유지 수준</td>
+            </tr>
+            <tr>
+              <td><span style="font-family:'Space Mono',monospace;font-weight:700;">2월</span></td>
+              <td><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);">12/16 ~ 01/15 (2026)</span></td>
+              <td><span style="font-family:'Space Mono',monospace;font-weight:700;color:#34d399;">~175¢</span></td>
+              <td><span style="font-family:'Space Mono',monospace;color:var(--muted);">~$73.5</span></td>
+              <td><span class="status-badge" style="background:rgba(52,211,153,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.3);">6단계</span></td>
+              <td><span class="status-badge status-partial">추정치</span></td>
+              <td style="font-size:11px;color:var(--muted);">국제유가 안정·하락 반영. 6단계(170~179¢) 구간. 25~35% 인하</td>
+            </tr>
+            <tr style="background:rgba(79,142,247,0.05);">
+              <td><span style="font-family:'Space Mono',monospace;font-weight:700;">3월</span></td>
+              <td><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);">01/16 ~ 02/15 (2026)</span></td>
+              <td><span style="font-family:'Space Mono',monospace;font-weight:700;color:#4f8ef7;">204.40¢ ✓</span></td>
+              <td><span style="font-family:'Space Mono',monospace;color:var(--muted);">~$85.8</span></td>
+              <td><span class="status-badge" style="background:rgba(79,142,247,0.15);color:#4f8ef7;border:1px solid rgba(79,142,247,0.3);">6단계</span></td>
+              <td><span class="status-badge status-confirmed">공식 확인</span></td>
+              <td style="font-size:11px;color:var(--muted);">서울경제·경향신문 공식 보도. 이란전쟁 이전 구간 (전쟁 2/28 발발)</td>
+            </tr>
+            <tr style="background:rgba(239,68,68,0.05);">
+              <td><span style="font-family:'Space Mono',monospace;font-weight:700;color:#fca5a5;">4월</span></td>
+              <td><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);">02/16 ~ 03/15 (2026)</span></td>
+              <td><span style="font-family:'Space Mono',monospace;font-weight:700;color:#ef4444;">~327¢ ✓</span></td>
+              <td><span style="font-family:'Space Mono',monospace;color:#fca5a5;font-weight:700;">$137.22</span></td>
+              <td><span class="status-badge status-confirmed" style="background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);">18단계</span></td>
+              <td><span class="status-badge status-confirmed">공식 확인</span></td>
+              <td style="font-size:11px;color:var(--muted);">중앙이코노미뉴스 $137.22/bbl 보도. 3/4일 최고 $240/bbl 포함 평균</td>
+            </tr>
+            <tr style="background:rgba(245,158,11,0.04);">
+              <td><span style="font-family:'Space Mono',monospace;font-weight:700;color:#fcd34d;">5월 (예상)</span></td>
+              <td><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);">03/16 ~ 04/15 (2026)</span></td>
+              <td><span style="font-family:'Space Mono',monospace;font-weight:700;color:#f59e0b;">200~260¢ ?</span></td>
+              <td><span style="font-family:'Space Mono',monospace;color:var(--muted);">$84~109</span></td>
+              <td><span class="status-badge status-review">10~14단계</span></td>
+              <td><span class="status-badge status-review">추정 (미확정)</span></td>
+              <td style="font-size:11px;color:var(--muted);">3월 중순 이후 항공유 현물 안정화 추세 반영. 4월 기준보다 낮을 가능성 높음</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border);font-size:11px;color:var(--muted);line-height:1.7;display:flex;gap:20px;flex-wrap:wrap;">
+        <span><strong style="color:var(--text);">단계 계산식</strong> &nbsp;MOPS ¢/gal ÷ 10 - 5 = 단계 (소수점 버림, 1단계=10¢ 구간)</span>
+        <span><strong style="color:var(--text);">환산</strong> &nbsp;¢/gal × 0.42 ≈ $/bbl (1배럴=42갤런, 항공유)</span>
+        <span><strong style="color:#fca5a5;">✓ = 언론 공식 보도 확인값</strong> &nbsp;|&nbsp; <span style="color:#fcd34d;">? = 추정치 (±20¢ 오차 가능)</span></span>
+      </div>
+    </div>
+
+    <!-- Correlation summary -->
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border);padding:14px 18px;margin-top:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.07em;margin-bottom:12px;">상관관계 구조 요약</div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;">
+        <div class="corr-box">
+          <div class="corr-box-top" style="color:#f59e0b;">장기 상관 (R ≈ 0.85~0.95)</div>
+          <div class="corr-box-body">원유가가 구조적으로 오르면 항공유도 수개월 내 동반 상승. 정제 비용·수급이 안정될 때의 평시 상관관계.</div>
+          <div class="corr-box-tag" style="background:rgba(245,158,11,0.12);color:#f59e0b;">평시·정상 국면</div>
+        </div>
+        <div class="corr-box" style="border-color:rgba(239,68,68,0.3);">
+          <div class="corr-box-top" style="color:#ef4444;">단기 괴리 (R ≈ 0.3~0.6)</div>
+          <div class="corr-box-body">전쟁·재난 등 충격 직후 항공유가 원유보다 먼저 급등 후 선행 하락. 수요 파괴·크랙스프레드 변동이 단기 괴리 주도.</div>
+          <div class="corr-box-tag" style="background:rgba(239,68,68,0.12);color:#ef4444;">충격 직후 국면 (현재)</div>
+        </div>
+        <div class="corr-box">
+          <div class="corr-box-top" style="color:#34d399;">할증료 반영 시차</div>
+          <div class="corr-box-body">MOPS 2개월 전 평균 → 할증료 적용. 항공유가 하락해도 이미 확정된 4월 단계(18단계)는 변경 불가. <span style="color:#fca5a5;font-weight:600;">5월 인하 가능성은 3~4월 MOPS 평균에 달림.</span></div>
+          <div class="corr-box-tag" style="background:rgba(52,211,153,0.12);color:#34d399;">할증료 결정 메커니즘</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 4: Surcharge Stage + Timeline -->
+  <div class="grid-2" style="margin-bottom:18px;">
+
+    <!-- Stage Meter -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">⚡ 유류할증료 단계 미터</div>
+          <div class="panel-sub">국토교통부 거리비례제 기준 33단계</div>
+        </div>
+        <span id="stage-badge" style="font-size:13px;font-family:'Space Mono',monospace;font-weight:700;"></span>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">MOPS 기준가격 (적용 단계)</span>
+          <span id="mops-val" style="font-family:'Space Mono',monospace;font-size:14px;color:var(--accent);font-weight:700;"></span>
+        </div>
+        <div class="stage-track">
+          <div class="stage-fill" id="stage-fill"></div>
+        </div>
+        <div class="stage-labels">
+          <span>0단계 (150¢ 미만)</span>
+          <span id="cur-stage-num"></span>
+          <span>33단계 (480¢+)</span>
+        </div>
+      </div>
+
+      <div id="monthly-stages">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📅 주요 이벤트 타임라인</div>
+          <div class="panel-sub">2026년 유가 & 유류할증료 변동 주요 사건</div>
+        </div>
+        <span class="panel-tag">TIMELINE</span>
+      </div>
+      <div class="timeline">
+        <div class="event">
+          <span class="event-date">1월</span>
+          <span class="event-text">브렌트유 <span>$70~72/bbl</span> 안정적. 1월 유류할증료 전월(12월) 수준 유지. 9단계 적용 (MOPS ~230¢/gal)</span>
+        </div>
+        <div class="event">
+          <span class="event-date">2월 초</span>
+          <span class="event-text">국제유가 안정세로 2월 유류할증료 대폭 <span>하락</span>. 9단계→6단계. 대한항공 최대 76,500원으로 인하</span>
+        </div>
+        <div class="event">
+          <span class="event-date">2월 28일</span>
+          <span class="event-text">🚨 <span>미국·이스라엘-이란 전쟁 발발.</span> 호르무즈 해협 긴장. 중동 영공 폐쇄로 우회 항로 증가</span>
+        </div>
+        <div class="event">
+          <span class="event-date">3월 4일</span>
+          <span class="event-text">싱가포르 항공유 <span>역대 최고 $240/bbl</span>(≈ 572¢/gal)까지 급등. 글로벌 항공유 +82.8%(전월비)</span>
+        </div>
+        <div class="event">
+          <span class="event-date">3월 16일</span>
+          <span class="event-text">4월 유류할증료 <span>6단계→18단계 (12단계↑)</span> 공식 발표. 2016년 거리비례제 도입 이후 최대 상승폭</span>
+        </div>
+        <div class="event">
+          <span class="event-date">4월 1일</span>
+          <span class="event-text">대한항공 <span>42,000원~303,000원</span> 적용 시작. 미주 왕복 유류할증료만 552,000원 이상</span>
+        </div>
+        <div class="event">
+          <span class="event-date">3월 27일</span>
+          <span class="event-text">브렌트유 <span>$112.57/bbl</span>, WTI $99.64/bbl. 5월 추가 인상 가능성 높음</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 5: Rate-of-change chart (full) -->
+  <div class="panel full-width" style="margin-bottom:18px;">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">🔥 전월 대비 유류할증료 변화율 (%)</div>
+        <div class="panel-sub">각 월의 전월 대비 증감률. 2월은 하락, 4월은 역대급 폭등</div>
+      </div>
+      <span class="panel-tag">CHANGE RATE</span>
+    </div>
+    <div class="chart-wrap" style="height:200px;">
+      <canvas id="changeChart"></canvas>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<footer>
+  데이터 출처: 대한항공 공식 유류할증료 공지 · 국토교통부 거리비례제 기준 · 싱가포르 MOPS 항공유 가격(IATA) · 브렌트유(Investing.com) · 서울경제·뉴스1·데일리안(비운항 현황) &nbsp;|&nbsp;
+  대권거리 기준 한국발 편도 · 발권일 기준 적용 · 2026년 1~5월
+</footer>
+
+<script>
+/* =========================================
+   DATA
+   ========================================= */
+const MONTHS = ['1월', '2월', '3월', '4월'];
+const STAGES = [9, 6, 6, 18];
+const MOPS = [230, 170, 204, 320]; // cents/gal (reference periods)
+const BRENT = [71, 76, 101, 113]; // $/bbl monthly avg (simplified)
+
+const ROUTES = {
+  japan:   { label:'🇯🇵 일본 (NRT)', color:'#8b8bff', values:[24500, 16200, 21000, 57000] },
+  china:   { label:'🇨🇳 중국 (PEK)', color:'#4f8ef7', values:[24500, 16200, 21000, 57000] },
+  vietnam: { label:'🇻🇳 베트남 (HAN)', color:'#34d399', values:[45500, 30200, 39000, 123000] },
+  usa:     { label:'🌎 미주 LA (LAX)', color:'#ff6b6b', values:[92800, 61500, 79500, 276000] },
+};
+const ROUTE_KEYS = Object.keys(ROUTES);
+
+const DESTINATIONS = [
+  { key:'japan',   name:'도쿄 (NRT)', lat:35.7720, lng:140.3929, flag:'🇯🇵' },
+  { key:'china',   name:'베이징 (PEK)', lat:40.0799, lng:116.6031, flag:'🇨🇳' },
+  { key:'vietnam', name:'하노이 (HAN)', lat:21.2213, lng:105.8072, flag:'🇻🇳' },
+  { key:'usa',     name:'LA (LAX)', lat:33.9425, lng:-118.4081, flag:'🌎' },
+];
+const INCHEON = { lat:37.4602, lng:126.4407 };
+
+let currentMonth = 3; // 4월 (index 3)
+
+/* =========================================
+   UTILITIES
+   ========================================= */
+function fmt(v) { return v.toLocaleString('ko-KR') + '원'; }
+function fmtK(v) { return (v/10000).toFixed(1) + '만'; }
+function pct(cur, prev) { return Math.round((cur-prev)/prev*100); }
+function stageColor(s) {
+  if (s <= 6) return '#10b981';
+  if (s <= 12) return '#f59e0b';
+  if (s <= 18) return '#ef4444';
+  return '#dc2626';
+}
+function surgeWidth(s) { return Math.min((s/33)*100, 100); }
+
+/* =========================================
+   KPI CARDS
+   ========================================= */
+function updateKPI(month) {
+  ROUTE_KEYS.forEach(k => {
+    const r = ROUTES[k];
+    const val = r.values[month];
+    const prev = month > 0 ? r.values[month-1] : null;
+    document.getElementById('kv-'+k).textContent = fmt(val);
+    const cel = document.getElementById('kc-'+k);
+    if (prev !== null) {
+      const p = pct(val, prev);
+      const sign = p > 0 ? '+' : '';
+      const cls = p > 0 ? 'up' : p < 0 ? 'down' : 'flat';
+      const arrow = p > 0 ? '▲' : p < 0 ? '▼' : '━';
+      cel.textContent = arrow + ' 전월 대비 ' + sign + p + '%';
+      cel.className = 'kpi-change ' + cls;
+    } else {
+      cel.textContent = '– 기준 월';
+      cel.className = 'kpi-change flat';
+    }
+  });
+}
+
+/* =========================================
+   STAGE METER
+   ========================================= */
+function updateStageMeter(month) {
+  const s = STAGES[month];
+  const m = MOPS[month];
+  const color = stageColor(s);
+  document.getElementById('stage-fill').style.width = surgeWidth(s) + '%';
+  document.getElementById('stage-fill').style.background = `linear-gradient(90deg, #10b981, ${color})`;
+  document.getElementById('stage-badge').textContent = s + '단계';
+  document.getElementById('stage-badge').style.color = color;
+  document.getElementById('cur-stage-num').textContent = s + '단계';
+  document.getElementById('mops-val').textContent = m + '¢/gal (~$' + Math.round(m*0.42) + '/bbl)';
+  document.getElementById('stage-label-sm').textContent = s + '단계';
+
+  const badgeEl = document.getElementById('map-stage-badge');
+  badgeEl.textContent = '단계: ' + s;
+  badgeEl.style.color = color;
+  badgeEl.style.background = color + '22';
+  badgeEl.style.borderColor = color + '55';
+
+  // Monthly stages table
+  const el = document.getElementById('monthly-stages');
+  el.innerHTML = MONTHS.map((m,i) => {
+    const st = STAGES[i];
+    const c = stageColor(st);
+    const isActive = i === month;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;margin-bottom:4px;background:${isActive ? c+'18' : 'transparent'};border:1px solid ${isActive ? c+'44' : 'transparent'};">
+      <span style="font-size:11px;color:var(--muted);min-width:22px;font-family:'Space Mono',monospace;">${m}</span>
+      <div style="flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;">
+        <div style="width:${surgeWidth(st)}%;height:100%;background:${c};border-radius:3px;"></div>
+      </div>
+      <span style="font-size:11px;font-family:'Space Mono',monospace;color:${c};font-weight:700;min-width:36px;text-align:right;">${st}단계</span>
+    </div>`;
+  }).join('');
+}
+
+/* =========================================
+   MAP
+   ========================================= */
+const map = L.map('map', {
+  center: [25, 95],
+  zoom: 3,
+  zoomControl: true,
+  attributionControl: false,
+});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap',
+  maxZoom: 10,
+}).addTo(map);
+L.control.attribution({ prefix: '© OpenStreetMap contributors' }).addTo(map);
+
+// Incheon marker
+const icnIcon = L.divIcon({
+  html: `<div style="background:#fff;border:2.5px solid #4f8ef7;border-radius:50%;width:14px;height:14px;box-shadow:0 0 12px rgba(79,142,247,0.7);"></div>`,
+  className: '',
+  iconAnchor: [7,7],
+});
+L.marker([INCHEON.lat, INCHEON.lng], { icon: icnIcon })
+  .bindPopup('<div class="popup-inner"><div class="popup-name">✈ 인천국제공항 (ICN)</div><div style="font-size:11px;color:#6b7a9a;margin-top:4px;">출발지 · 한국 · 37.46°N 126.44°E</div></div>', { className:'route-popup' })
+  .addTo(map);
+L.marker([INCHEON.lat, INCHEON.lng], {
+  icon: L.divIcon({
+    html: `<div style="font-size:10px;font-family:'Space Mono',monospace;color:#fff;white-space:nowrap;background:rgba(79,142,247,0.85);padding:2px 6px;border-radius:4px;margin-top:10px;">ICN · 인천</div>`,
+    className:'', iconAnchor:[-4,-8]
+  })
+}).addTo(map);
+
+let routeLayers = [];
+let destMarkers = [];
+
+function buildRoutePopup(key, month) {
+  const r = ROUTES[key];
+  const d = DESTINATIONS.find(x=>x.key===key);
+  const val = r.values[month];
+  const prev = month > 0 ? r.values[month-1] : null;
+  const p = prev !== null ? pct(val, prev) : null;
+  const sign = p > 0 ? '+' : '';
+  const arrow = p > 0 ? '▲' : p < 0 ? '▼' : '';
+  const pColor = p > 0 ? '#fca5a5' : p < 0 ? '#6ee7b7' : '#6b7a9a';
+  return `<div class="popup-inner">
+    <div class="popup-name">${d.flag} ${d.name}</div>
+    <div class="popup-value" style="color:${r.color}">${fmt(val)}</div>
+    <div class="popup-row">
+      <span>${MONTHS[month]} 유류할증료 (편도)</span>
+      ${p!==null ? `<span style="color:${pColor};font-weight:700;">${arrow} ${sign}${p}%</span>` : ''}
+    </div>
+    <div class="popup-row" style="margin-top:2px;">
+      <span>거리</span><span>${key==='japan'?'~750mi':key==='china'?'~820mi':key==='vietnam'?'~2,300mi':'~5,950mi'}</span>
+    </div>
+    <div class="popup-row" style="margin-top:2px;">
+      <span>왕복 추산</span><span style="color:#fff;font-weight:600;">${fmt(val*2)}</span>
+    </div>
+  </div>`;
+}
+
+function updateMap(month) {
+  routeLayers.forEach(l => map.removeLayer(l));
+  destMarkers.forEach(l => map.removeLayer(l));
+  routeLayers = [];
+  destMarkers = [];
+
+  document.getElementById('map-month-label').textContent = MONTHS[month];
+
+  DESTINATIONS.forEach(dest => {
+    const r = ROUTES[dest.key];
+    const val = r.values[month];
+    const maxVal = Math.max(...ROUTE_KEYS.map(k=>ROUTES[k].values[month]));
+    const weight = 2 + (val/maxVal)*3;
+    const opacity = 0.5 + (val/maxVal)*0.4;
+
+    // Curved line using intermediate point
+    const midLat = (INCHEON.lat + dest.lat)/2 + (dest.key==='usa' ? 8 : 3);
+    const midLng = (INCHEON.lng + dest.lng)/2;
+
+    const line = L.polyline(
+      [ [INCHEON.lat, INCHEON.lng], [midLat, midLng], [dest.lat, dest.lng] ],
+      { color: r.color, weight, opacity, dashArray: '8 4' }
+    ).addTo(map);
+    routeLayers.push(line);
+
+    // Destination marker
+    const radius = 14 + Math.round((val/maxVal)*18);
+    const icon = L.divIcon({
+      html: `<div style="width:${radius*2}px;height:${radius*2}px;border-radius:50%;background:${r.color}33;border:2px solid ${r.color};display:flex;align-items:center;justify-content:center;font-size:${12+Math.round(val/maxVal*4)}px;cursor:pointer;">${dest.flag}</div>`,
+      className: '',
+      iconAnchor: [radius, radius],
+    });
+    const marker = L.marker([dest.lat, dest.lng], { icon })
+      .bindPopup(buildRoutePopup(dest.key, month), { className:'route-popup', maxWidth:220 })
+      .addTo(map);
+    destMarkers.push(marker);
+
+    // Label
+    const labelIcon = L.divIcon({
+      html: `<div style="font-size:10px;font-family:'Space Mono',monospace;color:${r.color};white-space:nowrap;font-weight:700;margin-top:${radius+4}px;">${fmtK(val)+'만원'}</div>`,
+      className:'', iconAnchor:[0,0]
+    });
+    const label = L.marker([dest.lat, dest.lng], { icon: labelIcon, interactive:false }).addTo(map);
+    destMarkers.push(label);
+  });
+}
+
+/* =========================================
+   CHARTS
+   ========================================= */
+const gridColor = 'rgba(255,255,255,0.06)';
+const tickColor = '#6b7a9a';
+const chartFont = "'Noto Sans KR', sans-serif";
+
+Chart.defaults.font.family = chartFont;
+Chart.defaults.color = tickColor;
+
+// 1) Trend Line Chart
+const trendCtx = document.getElementById('trendChart');
+const trendChart = new Chart(trendCtx, {
+  type: 'line',
+  data: {
+    labels: MONTHS,
+    datasets: ROUTE_KEYS.map(k => ({
+      label: ROUTES[k].label,
+      data: ROUTES[k].values,
+      borderColor: ROUTES[k].color,
+      backgroundColor: ROUTES[k].color + '18',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      pointBackgroundColor: ROUTES[k].color,
+      tension: 0.35,
+      fill: false,
+    }))
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#141c2e',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleColor: '#e8eaf0',
+        bodyColor: '#9ba5bf',
+        padding: 12,
+        callbacks: { label: c => ' ' + c.dataset.label + ': ' + c.parsed.y.toLocaleString() + '원' }
+      }
+    },
+    scales: {
+      x: { ticks:{color:tickColor,font:{size:12}}, grid:{color:gridColor} },
+      y: { ticks:{color:tickColor,font:{size:11},callback:v=>(v/10000).toFixed(0)+'만원'}, grid:{color:gridColor} }
+    }
+  }
+});
+
+// Add annotation for April surge
+trendChart.options.plugins.annotation = {};
+
+// 2) Bar Chart
+const barCtx = document.getElementById('barChart');
+const BAR_COLORS = ['#5b7fcb','#10b981','#f59e0b','#ef4444'];
+const barChart = new Chart(barCtx, {
+  type: 'bar',
+  data: {
+    labels: ROUTE_KEYS.map(k => {
+      const d = DESTINATIONS.find(x=>x.key===k);
+      return d.flag + ' ' + (k==='japan'?'일본':k==='china'?'중국':k==='vietnam'?'베트남':'미주');
+    }),
+    datasets: MONTHS.map((m,i) => ({
+      label: m,
+      data: ROUTE_KEYS.map(k => ROUTES[k].values[i]),
+      backgroundColor: BAR_COLORS[i] + (i===3?'dd':'99'),
+      borderRadius: 5,
+      borderSkipped: false,
+    }))
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#141c2e',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        callbacks: { label: c => ' ' + c.dataset.label + ': ' + c.parsed.y.toLocaleString() + '원' }
+      }
+    },
+    scales: {
+      x: { ticks:{color:tickColor,font:{size:11}}, grid:{color:gridColor} },
+      y: { ticks:{color:tickColor,font:{size:11},callback:v=>(v/10000).toFixed(0)+'만원'}, grid:{color:gridColor} }
+    }
+  }
+});
+
+// 3) Oil Price Dual Axis
+// Monthly data points — more granular (weekly-ish)
+// MOPS reference periods overlap months so we show a slightly longer window
+const oilLabels = ['11월말','12월중','12월말','1월중','1월말','2월중','2월16','2월말','3월1일','3월5일','3월10일','3월15일','3월말'];
+const brentData = [74, 73, 72, 71, 70, 72, 74, 88, 95, 105, 110, 108, 112];
+const mopsData = [245, 228, 220, 204, 195, 204, 206, 270, 340, 460, 380, 320, 300];
+// 이란전쟁 발발 index: 7 (2월말)
+
+const oilCtx = document.getElementById('oilChart');
+const oilChart = new Chart(oilCtx, {
+  type: 'line',
+  data: {
+    labels: oilLabels,
+    datasets: [
+      {
+        label: '브렌트유 ($/bbl)',
+        data: brentData,
+        borderColor: '#f59e0b',
+        backgroundColor: '#f59e0b22',
+        borderWidth: 2,
+        pointRadius: 3,
+        yAxisID: 'y',
+        tension: 0.3,
+      },
+      {
+        label: '싱가포르 MOPS 항공유 (¢/gal)',
+        data: mopsData,
+        borderColor: '#4f8ef7',
+        backgroundColor: '#4f8ef722',
+        borderWidth: 2,
+        pointRadius: 3,
+        yAxisID: 'y2',
+        tension: 0.3,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#141c2e',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        callbacks: {
+          label: c => {
+            if (c.datasetIndex === 0) return ' 브렌트유: $' + c.parsed.y + '/bbl';
+            return ' 항공유: ' + c.parsed.y + '¢/gal';
+          }
+        }
+      }
+    },
+    scales: {
+      x: { ticks:{color:tickColor,font:{size:10},maxRotation:45}, grid:{color:gridColor} },
+      y: {
+        position:'left',
+        ticks:{color:'#f59e0b',font:{size:10},callback:v=>'$'+v},
+        grid:{color:gridColor},
+        title:{display:true,text:'브렌트유($/bbl)',color:'#f59e0b',font:{size:10}},
+      },
+      y2: {
+        position:'right',
+        ticks:{color:'#4f8ef7',font:{size:10},callback:v=>v+'¢'},
+        grid:{display:false},
+        title:{display:true,text:'항공유(¢/gal)',color:'#4f8ef7',font:{size:10}},
+      }
+    }
+  }
+});
+
+// Draw "war" annotation manually via plugin
+const warPlugin = {
+  id:'warLine',
+  afterDraw(chart) {
+    if (chart !== oilChart) return;
+    const {ctx, chartArea, scales} = chart;
+    const x = scales.x.getPixelForValue(7);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(239,68,68,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(239,68,68,0.85)';
+    ctx.font = '10px "Space Mono"';
+    ctx.textAlign = 'left';
+    ctx.fillText('이란전쟁', x+4, chartArea.top+12);
+    ctx.restore();
+  }
+};
+Chart.register(warPlugin);
+
+// 4) Scatter — Brent vs Surcharge (short + long haul)
+const scatterCtx = document.getElementById('scatterChart');
+// x = Brent $/bbl (monthly avg), y = surcharge
+const scatterData = [
+  { brent:71, japan:24500, usa:92800, label:'1월' },
+  { brent:73, japan:16200, usa:61500, label:'2월' },
+  { brent:85, japan:21000, usa:79500, label:'3월' },
+  { brent:112,japan:57000, usa:276000,label:'4월' },
+];
+const scatterChart = new Chart(scatterCtx, {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: '단거리(일본·중국)',
+        data: scatterData.map(d=>({x:d.brent, y:d.japan/1000})),
+        backgroundColor: '#8b8bff',
+        pointRadius: 7,
+        pointHoverRadius: 9,
+      },
+      {
+        label: '미주(LA)',
+        data: scatterData.map(d=>({x:d.brent, y:d.usa/1000})),
+        backgroundColor: '#ff6b6b',
+        pointRadius: 7,
+        pointHoverRadius: 9,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#141c2e',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        callbacks: {
+          label: c => ' ' + c.dataset.label + ': 브렌트 $'+c.parsed.x+'/bbl → '+(c.parsed.y*1000).toLocaleString()+'원'
+        }
+      }
+    },
+    scales: {
+      x: {
+        title:{display:true,text:'브렌트유 ($/bbl)',color:tickColor,font:{size:10}},
+        ticks:{color:tickColor,font:{size:10},callback:v=>'$'+v},
+        grid:{color:gridColor}
+      },
+      y: {
+        title:{display:true,text:'유류할증료(만원)',color:tickColor,font:{size:10}},
+        ticks:{color:tickColor,font:{size:10},callback:v=>v+'만'},
+        grid:{color:gridColor}
+      }
+    }
+  }
+});
+
+// Month labels on scatter points
+const scatterLabelPlugin = {
+  id:'scatterLabels',
+  afterDatasetsDraw(chart) {
+    if (chart !== scatterChart) return;
+    const {ctx, scales} = chart;
+    chart.data.datasets.forEach((ds,di) => {
+      ds.data.forEach((pt,i) => {
+        const x = scales.x.getPixelForValue(pt.x);
+        const y = scales.y.getPixelForValue(pt.y);
+        ctx.save();
+        ctx.fillStyle = '#6b7a9a';
+        ctx.font = '9px "Space Mono"';
+        ctx.textAlign = 'center';
+        ctx.fillText(scatterData[i].label, x, y - 11);
+        ctx.restore();
+      });
+    });
+  }
+};
+Chart.register(scatterLabelPlugin);
+
+// 5) Change Rate Chart
+const changeCtx = document.getElementById('changeChart');
+const changes = {
+  japan:   [null, pct(16200,24500), pct(21000,16200), pct(57000,21000)],
+  china:   [null, pct(16200,24500), pct(21000,16200), pct(57000,21000)],
+  vietnam: [null, pct(30200,45500), pct(39000,30200), pct(123000,39000)],
+  usa:     [null, pct(61500,92800), pct(79500,61500), pct(276000,79500)],
+};
+const changeChart = new Chart(changeCtx, {
+  type: 'bar',
+  data: {
+    labels: ['2월(vs1월)', '3월(vs2월)', '4월(vs3월)'],
+    datasets: ROUTE_KEYS.map(k=>({
+      label: ROUTES[k].label,
+      data: changes[k].slice(1),
+      backgroundColor: changes[k].slice(1).map(v => v>0 ? ROUTES[k].color+'cc' : ROUTES[k].color+'66'),
+      borderRadius: 5,
+    }))
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor:'#141c2e',
+        borderColor:'rgba(255,255,255,0.1)',
+        borderWidth:1,
+        callbacks: { label: c => ' ' + c.dataset.label + ': ' + (c.parsed.y>0?'+':'') + c.parsed.y + '%' }
+      }
+    },
+    scales: {
+      x: { ticks:{color:tickColor,font:{size:12}}, grid:{color:gridColor} },
+      y: {
+        ticks:{color:tickColor,font:{size:11},callback:v=>v+'%'},
+        grid:{color:gridColor},
+        afterFit(s){s.paddingBottom=0;}
+      }
+    }
+  }
+});
+
+// 0-line plugin
+const zeroLinePlugin = {
+  id:'zeroLine',
+  afterDraw(chart) {
+    if (chart !== changeChart) return;
+    const {ctx, chartArea, scales} = chart;
+    const y0 = scales.y.getPixelForValue(0);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(chartArea.left, y0);
+    ctx.lineTo(chartArea.right, y0);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+Chart.register(zeroLinePlugin);
+
+/* =========================================
+   MONTH SELECTOR
+   ========================================= */
+function selectMonth(month, btn) {
+  currentMonth = month;
+  document.querySelectorAll('.month-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  updateKPI(month);
+  updateStageMeter(month);
+  updateMap(month);
+
+  // Highlight selected month in charts via vertical line
+  [trendChart, barChart].forEach(chart => {
+    chart.data.datasets.forEach(ds => {
+      if (ds.pointBackgroundColor) return;
+    });
+    chart.update();
+  });
+}
+
+// 7) Regional Jet Fuel Price Chart
+const regLabels = ['11월말','12월','1월초','1월말','2월초','2/16','2/27','3/1','3/4','3/7','3/10','3/15','3/20','3/27'];
+// $/bbl estimates — US Gulf Coast (Argus), Europe NWE (Platts), Asia Singapore (MOPS)
+const regUS  = [92,  90,  89,  88,  86,  86,  88,  96,  145, 152, 155, 151, 153, 165];
+const regEU  = [90,  89,  89,  88,  87,  87,  89,  98,  150, 155, 158, 155, 162, 172];
+const regSG  = [103, 96,  88,  86,  83,  84,  87,  110, 228, 195, 178, 148, 138, 130];
+const regGLB = [95,  92,  89,  87,  85,  85,  88,  102, 188, 170, 162, 151, 152, 162]; // IATA composite (confirmed: ~$197 week of Mar 20)
+// Correct Mar 20 IATA to confirmed $197
+regGLB[12] = 197;
+
+// Index versions (pre-war Feb 27 = 100)
+function toIdx(arr, baseIdx) {
+  const base = arr[baseIdx];
+  return arr.map(v => Math.round(v / base * 100));
+}
+const baseI = 6; // index 6 = 2/27 (pre-war)
+const regUSI  = toIdx(regUS,  baseI);
+const regEUI  = toIdx(regEU,  baseI);
+const regSGI  = toIdx(regSG,  baseI);
+const regGLBI = toIdx(regGLB, baseI);
+
+let regShowIdx = false;
+
+const regCtx = document.getElementById('regionalChart');
+const regionalChart = new Chart(regCtx, {
+  type: 'line',
+  data: {
+    labels: regLabels,
+    datasets: [
+      { label:'미국 걸프코스트', data: regUS,  borderColor:'#ff6b6b', backgroundColor:'#ff6b6b18', borderWidth:2.5, pointRadius:3, tension:0.3, fill:false },
+      { label:'유럽 로테르담',   data: regEU,  borderColor:'#f59e0b', backgroundColor:'#f59e0b18', borderWidth:2.5, pointRadius:3, tension:0.3, fill:false },
+      { label:'아시아 싱가포르', data: regSG,  borderColor:'#34d399', backgroundColor:'#34d39918', borderWidth:2.5, pointRadius:3, tension:0.3, fill:false },
+      { label:'IATA 글로벌',    data: regGLB, borderColor:'#4f8ef7', backgroundColor:'transparent', borderWidth:1.5, pointRadius:2, tension:0.3, fill:false, borderDash:[4,3] },
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins: {
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:'#141c2e', borderColor:'rgba(255,255,255,0.1)', borderWidth:1,
+        callbacks:{ label: c => ' '+c.dataset.label+': '+(regShowIdx ? c.parsed.y : '$'+c.parsed.y+'/bbl') }
+      }
+    },
+    scales:{
+      x:{ ticks:{color:tickColor,font:{size:9},maxRotation:45,autoSkip:false}, grid:{color:gridColor} },
+      y:{ ticks:{color:tickColor,font:{size:10},callback:v=>regShowIdx?v+'':('$'+v)}, grid:{color:gridColor} }
+    }
+  }
+});
+
+// War line annotation for regional chart
+const regWarPlugin = {
+  id:'regWar',
+  afterDraw(chart) {
+    if (chart !== regionalChart) return;
+    const {ctx, chartArea, scales} = chart;
+    // war line at index 7 (3/1, day after war)
+    const xW = scales.x.getPixelForValue(7);
+    ctx.save();
+    ctx.strokeStyle='rgba(239,68,68,0.5)'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(xW,chartArea.top); ctx.lineTo(xW,chartArea.bottom); ctx.stroke();
+    ctx.fillStyle='rgba(239,68,68,0.85)'; ctx.font='9px "Space Mono"'; ctx.textAlign='left';
+    ctx.fillText('이란전쟁',xW+3,chartArea.top+10);
+    // SG peak label at index 8 (3/4)
+    const xP = scales.x.getPixelForValue(8);
+    ctx.strokeStyle='rgba(52,211,153,0.4)'; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(xP,chartArea.top+24); ctx.lineTo(xP,chartArea.bottom); ctx.stroke();
+    ctx.fillStyle='#34d399'; ctx.fillText('SG 피크',xP+3,chartArea.top+24);
+    ctx.restore();
+  }
+};
+Chart.register(regWarPlugin);
+
+function toggleRegUnit(btn) {
+  regShowIdx = false;
+  document.getElementById('rg-unit-btn').classList.add('active');
+  document.getElementById('rg-idx-btn').classList.remove('active');
+  document.getElementById('reg-chart-label').textContent = '주간 현물가 추이 ($/bbl)';
+  [regUS, regEU, regSG, regGLB].forEach((d,i) => { regionalChart.data.datasets[i].data = d; });
+  regionalChart.options.scales.y.ticks.callback = v=>'$'+v;
+  regionalChart.update();
+}
+function toggleRegIdx(btn) {
+  regShowIdx = true;
+  document.getElementById('rg-idx-btn').classList.add('active');
+  document.getElementById('rg-unit-btn').classList.remove('active');
+  document.getElementById('reg-chart-label').textContent = '지수 비교 (전쟁 전 2/27 = 100)';
+  [regUSI, regEUI, regSGI, regGLBI].forEach((d,i) => { regionalChart.data.datasets[i].data = d; });
+  regionalChart.options.scales.y.ticks.callback = v=>v;
+  regionalChart.update();
+}
+
+// 6) Divergence chart — indexed to 100
+const divLabels = ['11월말','12월','1월','2월초','2/16','2/28','3/4','3/10','3/15','3/20','3/27'];
+// Brent indexed (Nov end ~74 = 100)
+const brentIdx = [100, 97, 96, 97, 100, 119, 135, 149, 146, 148, 152];
+// MOPS jet fuel indexed (Nov end ~245¢ = 100)
+const mopsIdx  = [100, 90, 84, 83, 84, 110, 188, 155, 131, 122, 122];
+// Crack spread = MOPS - Brent (index diff, centred)
+const crackIdx = mopsIdx.map((v,i) => v - brentIdx[i]);
+
+const divCtx = document.getElementById('divChart');
+const divChart = new Chart(divCtx, {
+  type: 'line',
+  data: {
+    labels: divLabels,
+    datasets: [
+      {
+        label: '브렌트유 (지수)',
+        data: brentIdx,
+        borderColor: '#f59e0b',
+        backgroundColor: '#f59e0b18',
+        borderWidth: 2,
+        pointRadius: 2.5,
+        yAxisID: 'y',
+        tension: 0.3,
+        fill: false,
+      },
+      {
+        label: '항공유 MOPS (지수)',
+        data: mopsIdx,
+        borderColor: '#4f8ef7',
+        backgroundColor: '#4f8ef718',
+        borderWidth: 2,
+        pointRadius: 2.5,
+        yAxisID: 'y',
+        tension: 0.3,
+        fill: false,
+      },
+      {
+        label: '크랙스프레드 (괴리)',
+        data: crackIdx,
+        borderColor: '#ff6b6b',
+        backgroundColor: '#ff6b6b18',
+        borderWidth: 1.5,
+        pointRadius: 2,
+        yAxisID: 'y2',
+        tension: 0.3,
+        borderDash: [4,3],
+        fill: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#141c2e',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        callbacks: {
+          label: c => {
+            if (c.datasetIndex < 2) return ' ' + c.dataset.label + ': ' + c.parsed.y.toFixed(1);
+            return ' 크랙스프레드: ' + (c.parsed.y > 0 ? '+' : '') + c.parsed.y.toFixed(1);
+          }
+        }
+      }
+    },
+    scales: {
+      x: { ticks:{color:tickColor,font:{size:9},maxRotation:45,autoSkip:false}, grid:{color:gridColor} },
+      y: {
+        position:'left',
+        ticks:{color:tickColor,font:{size:10},callback:v=>v},
+        grid:{color:gridColor},
+        title:{display:true,text:'지수 (11월말=100)',color:tickColor,font:{size:9}},
+      },
+      y2: {
+        position:'right',
+        ticks:{color:'#ff6b6b',font:{size:9},callback:v=>(v>0?'+':'')+v},
+        grid:{display:false},
+        title:{display:true,text:'스프레드',color:'#ff6b6b',font:{size:9}},
+      }
+    }
+  }
+});
+
+// War + divergence annotation plugin for divChart
+const divAnnotPlugin = {
+  id:'divAnnot',
+  afterDraw(chart) {
+    if (chart !== divChart) return;
+    const {ctx, chartArea, scales} = chart;
+    // War line at index 5 (2/28)
+    const xW = scales.x.getPixelForValue(5);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(239,68,68,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(xW, chartArea.top); ctx.lineTo(xW, chartArea.bottom); ctx.stroke();
+    ctx.fillStyle = 'rgba(239,68,68,0.85)';
+    ctx.font = '9px "Space Mono"';
+    ctx.textAlign = 'left';
+    ctx.fillText('이란전쟁', xW+3, chartArea.top+10);
+    // Divergence arrow at index 6 (3/4 peak)
+    const xP = scales.x.getPixelForValue(6);
+    ctx.strokeStyle = 'rgba(255,107,107,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(xP, chartArea.top+20); ctx.lineTo(xP, chartArea.bottom); ctx.stroke();
+    ctx.fillStyle = '#ff6b6b';
+    ctx.fillText('항공유 최고점', xP+3, chartArea.top+20);
+    ctx.restore();
+  }
+};
+Chart.register(divAnnotPlugin);
+
+/* =========================================
+   SUSPENSION TABLE
+   ========================================= */
+const SUSP_DATA = [
+  {
+    airline:'에어프레미아', logo:'AP', logoColor:'#4f8ef7',
+    type:'미주', routes:['ICN→LAX','ICN→SFO','ICN→HNL','ICN→EWR','ICN→IAD'],
+    period:'2026.04.20 ~ 05.31',
+    scale: 50, scaleLabel:'50편',
+    status:'confirmed', statusLabel:'확정',
+    note:'LAX 26편·SFO 8편·HNL 6편·EWR 2편·IAD 2편. 무료 변경·전액 환불 가능'
+  },
+  {
+    airline:'에어프레미아', logo:'AP', logoColor:'#4f8ef7',
+    type:'동남아', routes:['ICN→BKK'],
+    period:'2026.04 ~ 05',
+    scale: 6, scaleLabel:'6편',
+    status:'confirmed', statusLabel:'확정',
+    note:'방콕(BKK) 6편 비운항 추가 확정'
+  },
+  {
+    airline:'진에어', logo:'LJ', logoColor:'#fcd34d',
+    type:'대양주', routes:['ICN→GUM','ICN→CRK','ICN→VCL','PUS→CEB'],
+    period:'2026.04.04 ~ 04.30',
+    scale: 45, scaleLabel:'45편',
+    status:'confirmed', statusLabel:'확정',
+    note:'8개 노선 왕복 기준 45편. 괌·클라크·냐짱(나트랑)·세부'
+  },
+  {
+    airline:'에어부산', logo:'BX', logoColor:'#8b8bff',
+    type:'대양주', routes:['PUS→GUM','PUS→DAN','PUS→CEB'],
+    period:'2026.04',
+    scale: 20, scaleLabel:'20편',
+    status:'confirmed', statusLabel:'확정',
+    note:'괌 왕복 14편·다낭 왕복 4편·세부 왕복 2편. 5월 추가 축소 검토'
+  },
+  {
+    airline:'이스타항공', logo:'ZE', logoColor:'#34d399',
+    type:'동남아', routes:['ICN→PQC'],
+    period:'2026.05.05 ~ 05.31',
+    scale: 50, scaleLabel:'50편+',
+    status:'confirmed', statusLabel:'확정',
+    note:'베트남 현지 급유 제한 리스크·예약률 저조. 푸꾸옥 50여편 전면 중단'
+  },
+  {
+    airline:'에어로케이', logo:'RF', logoColor:'#f59e0b',
+    type:'동남아', routes:['CJJ→CRK','CJJ→ULN'],
+    period:'2026.04 ~ 06',
+    scale: 8, scaleLabel:'일부편',
+    status:'confirmed', statusLabel:'확정',
+    note:'청주~클라크·청주~울란바토르 등 4개 국제선 일부 비운항. 8~10월 인천~오사카·이바라키도 예고'
+  },
+  {
+    airline:'제주항공', logo:'7C', logoColor:'#ff6b6b',
+    type:'동남아', routes:['ICN→동남아 일부'],
+    period:'2026.04 ~ 05',
+    scale: 0, scaleLabel:'검토중',
+    status:'review', statusLabel:'검토중',
+    note:'동남아 노선 감편 여부 내부 검토 중 (LCC 1위)'
+  },
+  {
+    airline:'티웨이항공', logo:'TW', logoColor:'#f87171',
+    type:'동남아', routes:['ICN→동남아 일부'],
+    period:'2026.04 ~ 05',
+    scale: 0, scaleLabel:'검토중',
+    status:'review', statusLabel:'검토중',
+    note:'동남아 노선 감편 여부 내부 검토 중 (LCC 2위)'
+  },
+  {
+    airline:'비엣젯항공', logo:'VJ', logoColor:'#ef4444',
+    type:'동남아', routes:['ICN→NHA','ICN→DAD','ICN→PQC','PUS→NHA'],
+    period:'2026.04.08 ~ 05.01',
+    scale: 30, scaleLabel:'다수편',
+    status:'partial', statusLabel:'일부확정',
+    note:'나트랑·다낭·푸꾸옥 4월 결항. 푸꾸옥 4/8~5/1 전편 운항 중단. 베트남 급유 제한 이유'
+  },
+  {
+    airline:'베트남항공', logo:'VN', logoColor:'#6b7a9a',
+    type:'동남아', routes:['ICN→HAN','ICN→SGN'],
+    period:'2026.04 ~ 05',
+    scale: 15, scaleLabel:'일부편',
+    status:'partial', statusLabel:'일부확정',
+    note:'인천~하노이·호치민 노선 4~5월 일부 비운항 처리'
+  },
+];
+
+const MAX_SCALE = Math.max(...SUSP_DATA.map(d=>d.scale||1));
+
+function buildSuspRow(d) {
+  const routePills = d.routes.map(r=>`<span class="route-pill">${r}</span>`).join('');
+  const statusClass = d.status==='confirmed'?'status-confirmed':d.status==='partial'?'status-partial':'status-review';
+  const barW = d.scale ? Math.max(Math.round((d.scale/MAX_SCALE)*80),4) : 0;
+  return `<tr data-type="${d.type}" data-status="${d.status}">
+    <td>
+      <div class="airline-badge">
+        <span class="airline-logo" style="background:${d.logoColor}22;color:${d.logoColor};border:1px solid ${d.logoColor}44;">${d.logo}</span>
+        ${d.airline}
+      </div>
+    </td>
+    <td><span style="font-size:11px;color:var(--muted);">${d.type}</span></td>
+    <td style="max-width:220px;">${routePills}</td>
+    <td style="font-family:'Space Mono',monospace;font-size:11px;white-space:nowrap;">${d.period}</td>
+    <td>
+      <div class="scale-bar">
+        ${d.scale ? `<div class="scale-fill" style="width:${barW}px;"></div>` : ''}
+        <span style="font-size:11px;font-family:'Space Mono',monospace;color:${d.status==='review'?'var(--muted)':'var(--coral)'};">${d.scaleLabel}</span>
+      </div>
+    </td>
+    <td><span class="status-badge ${statusClass}">${d.statusLabel}</span></td>
+    <td style="font-size:11px;color:var(--muted);max-width:260px;line-height:1.5;">${d.note}</td>
+  </tr>`;
+}
+
+function renderSuspTable(data) {
+  document.getElementById('susp-tbody').innerHTML = data.map(buildSuspRow).join('');
+}
+
+function filterSusp(f, btn) {
+  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const rows = document.querySelectorAll('#susp-tbody tr');
+  rows.forEach(row => {
+    const type = row.dataset.type;
+    const status = row.dataset.status;
+    if (f === 'all') { row.classList.remove('hidden-row'); return; }
+    if (f === '검토중') {
+      row.classList.toggle('hidden-row', status !== 'review');
+    } else {
+      row.classList.toggle('hidden-row', type !== f);
+    }
+  });
+}
+
+renderSuspTable(SUSP_DATA);
+
+/* =========================================
+   INIT
+   ========================================= */
+updateKPI(3);
+updateStageMeter(3);
+updateMap(3);
+</script>
+</body>
+</html>
